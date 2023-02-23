@@ -1,1 +1,102 @@
 # Restaurant-Sql-project
+
+1)What is the total amount each customer spent at the restaurant?
+SELECT 
+s.customer_id, 
+SUM(price) AS total_sales
+FROM 
+dbo.sales AS s
+JOIN dbo.menu AS m
+ON s.product_id = m.product_id
+GROUP BY customer_id
+
+2)How many days has each customer visited the restaurant?
+SELECT 
+customer_id, 
+ COUNT(DISTINCT(order_date)) AS visit_count
+FROM 
+dbo.sales
+GROUP BY customer_id;
+
+3)What was the first item from the menu purchased by each customer?
+WITH ordered_sales_cte AS
+(
+ SELECT customer_id, order_date, product_name,
+ DENSE_RANK() OVER(PARTITION BY s.customer_id
+ ORDER BY s.order_date) AS rank
+ FROM dbo.sales AS s
+ JOIN dbo.menu AS m
+ ON s.product_id = m.product_id
+)
+SELECT customer_id, product_name
+FROM ordered_sales_cte
+WHERE rank = 1
+GROUP BY customer_id, product_name;
+
+4)What is the most purchased item on the menu and how many times was it purchased by all customers?
+SELECT (COUNT(s.product_id)) AS most_purchased, product_name
+FROM dbo.sales AS s
+JOIN dbo.menu AS m
+ ON s.product_id = m.product_id
+GROUP BY s.product_id, product_name
+ORDER BY most_purchased DESC
+LIMIT 1
+
+5)Which item was the most popular one for each customer?
+WITH fav_item_cte AS
+(
+ SELECT s.customer_id, m.product_name, 
+ COUNT(m.product_id) AS order_count,
+ DENSE_RANK() OVER(PARTITION BY s.customer_id
+ ORDER BY COUNT(m.product_id) DESC) AS rank
+FROM dbo.menu AS m
+JOIN dbo.sales AS s
+ ON m.product_id = s.product_id
+GROUP BY s.customer_id, m.product_name
+)
+SELECT customer_id, product_name, order_count
+FROM fav_item_cte 
+WHERE rank = 1;
+
+6)Write a query to find how many order are sold per product. Sort the data in terms of unit sold(descending order).
+select m.product_id, m.product_name, count(order_date) as unit_sold
+from dbo.sales as s
+left join dbo.menu as m
+on s.product_id = m.product_id
+group by m.product_id, m.product_name
+order by unit_sold desc
+
+7)Write a query to return the total revenue generated.
+select sum(m.price) as total_revenue
+from dbo.sales as s
+left join dbo.menu as m
+on s.product_id = m.product_id
+where s.order_date is not null
+
+8)Write a query to return the most selling product under product_name = ‘ramen'
+
+SELECT
+product_name,
+COUNT(m.price) AS unit_sold
+FROM
+dbo.sales as s
+LEFT JOIN
+dbo.menu as m
+ON s.product_id = m.product_id
+WHERE product_name= 'ramen'
+GROUP BY
+product_name
+ORDER BY
+unit_sold DESC
+LIMIT 1
+
+
+10)Write a query to find the difference between order_date and join_date per product_id?*/
+select s.product_id,
+sum(s.order_date)-count(m.join_date) as dates
+from dbo.sales as s
+left join 
+dbo.members as m
+on s.customer_id = m.customer_id
+group by s.product_id
+order by dates desc
